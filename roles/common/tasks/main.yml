@@ -1,0 +1,110 @@
+  - name: Creates destination directory for ssh keys
+    # Workaround for #2372
+    file: state=directory mode=0700 dest=/root/.ssh/
+      
+  - name: Pushes current user rsa key to k8s nodes
+    copy: src=~/.ssh/id_rsa.pub dest=/root/.ssh/authorized_keys owner=root mode=0600
+    ignore_errors: yes
+    tags:
+      - ssh-keygen
+
+  - name: Disable SELINUX
+    selinux:
+      state: disabled
+
+  - name: Stop and Disable Firewalld
+    systemd:
+      state: stopped
+      enabled: no
+      name: firewalld
+
+  - name: Set IPTables config
+    iptables:
+      chain: INPUT
+      in_interface: ens160
+      protocol: tcp
+      source: 192.168.7.0/24 
+      destination_port: 6789
+      jump: ACCEPT
+
+#  - name: Add ceph yum repo
+#    yum_repository:
+#      name: ceph-noarch
+#      description: Ceph noarch packages
+#      baseurl: http://download.ceph.com/rpm-hammer/el7/noarch
+#      enabled: yes
+#      gpgcheck: yes
+#      repo_gpgcheck: yes
+#      gpgkey: |
+#        https://download.ceph.com/keys/release.asc
+
+  - name: Yum update
+    yum:
+      name: '*'
+      state: latest
+
+  - name: Yum install packages ntp
+    yum: 
+      name={{item}} 
+      state=latest
+    with_items:
+      - ntp
+
+  - name: Start and enable NTPD
+    systemd:
+      daemon_reload=yes
+      state=started
+      enabled=yes
+      name={{item}}
+    with_items:
+      - ntpd
+
+  - name: Create user ceph
+    user:
+      name: ceph
+      password: $6$pBhUqgCL$u0CBIlVTOk.F0v9PN0nBzkI/to.pVhdboqBa30atsZJlmR53qvogtaaWtgXQcWUi7z4lL1n8Bkm0Y0oc/ICVI.
+      generate_ssh_key: yes
+
+  - name: copy ceph in sudoers.d
+    copy: src=roles/common/files/sudoers.d/ceph dest=/etc/sudoers.d owner=root mode=0600
+
+  - name: Get ceph id_rsa.pub from remote
+    fetch: 
+      src: '/home/ceph/.ssh/id_rsa.pub'
+      dest: 'roles/common/files/ceph.{{inventory_hostname}}.pub'
+      flat: yes
+    tags:
+      - ssh-keygen
+
+  - name: Set authorized_keys on hosts
+    authorized_key:
+      user: ceph
+      key: "{{lookup('file','{{item}}')}}"
+      state: present
+    with_fileglob:
+      - 'roles/common/files/ceph.*.pub'
+    tags:
+      - ssh-keygen
+
+  - name: increase kernel.pid_max
+    sysctl:
+      name: kernel.pid_max
+      value: 4194303
+      state: present
+
+  - name: Yum install packages ceph-deploy
+    yum:
+      name={{item}}
+      state=latest
+    with_items:
+      - ceph-deploy
+
+#  - name: Remove repository ceph
+#    yum_repository:
+#      name: ceph
+#      state: absent
+
+#  - name: wait for servers restarts
+#    local_action: wait_for port=22 host="{{ inventory_hostname }}" delay=30 state=started timeout=600 connect_timeout=15
+#    when: reboot.changed
+
