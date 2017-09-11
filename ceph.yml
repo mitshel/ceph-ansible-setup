@@ -2,3 +2,7 @@
 - hosts: all
   roles:
     - common
+
+- hosts: ceph-admin
+  roles:
+    - ceph-admin

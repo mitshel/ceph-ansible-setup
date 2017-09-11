@@ -1,2 +1,2 @@
 #!/bin/bash
-ansible-playbook -i hosts ceph.yml $@  
+ansible-playbook -i hosts ceph.yml $@ --skip-tags=disable

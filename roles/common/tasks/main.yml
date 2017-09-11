@@ -27,16 +27,21 @@
       destination_port: 6789
       jump: ACCEPT
 
-#  - name: Add ceph yum repo
-#    yum_repository:
-#      name: ceph-noarch
-#      description: Ceph noarch packages
-#      baseurl: http://download.ceph.com/rpm-hammer/el7/noarch
-#      enabled: yes
-#      gpgcheck: yes
-#      repo_gpgcheck: yes
-#      gpgkey: |
-#        https://download.ceph.com/keys/release.asc
+  - name: Add ceph yum repo
+    yum_repository:
+      name: ceph-noarch
+      description: Ceph noarch packages
+      baseurl: http://download.ceph.com/rpm-hammer/el7/noarch
+      enabled: yes
+      gpgcheck: yes
+      repo_gpgcheck: yes
+      gpgkey: |
+        https://download.ceph.com/keys/release.asc
+    tags:
+      - disable
+
+  - name:  Add ceph yum repo
+    copy: src=roles/common/files/yum.repos.d/ceph.repo dest=/etc/yum.repos.d/ owner=root mode=0600
 
   - name: Yum update
     yum:
@@ -59,10 +64,10 @@
     with_items:
       - ntpd
 
-  - name: Create user ceph
+  - name: Create user ceph (password: dsadmin)
     user:
       name: ceph
-      password: $6$pBhUqgCL$u0CBIlVTOk.F0v9PN0nBzkI/to.pVhdboqBa30atsZJlmR53qvogtaaWtgXQcWUi7z4lL1n8Bkm0Y0oc/ICVI.
+      password: $6$bosvH2aV$3yYj60/7EILBzvNq/WSyCBPpyEXDhZusVeZ0oDTjDriuNKRPCfqUqxHuvvH4lYE2OX4/GqbTnCSzDc6ePr2nq0
       generate_ssh_key: yes
 
   - name: copy ceph in sudoers.d
@@ -99,10 +104,15 @@
     with_items:
       - ceph-deploy
 
-#  - name: Remove repository ceph
-#    yum_repository:
-#      name: ceph
-#      state: absent
+  - name: Remove repository ceph
+    yum_repository:
+      name: ceph
+      state: absent
+    tags:
+      - disable
+
+  - name: Remove repository ceph
+    file: path=/etc/yum.repos.d/ceph.repo state=absent
 
 #  - name: wait for servers restarts
 #    local_action: wait_for port=22 host="{{ inventory_hostname }}" delay=30 state=started timeout=600 connect_timeout=15

@@ -1,0 +1,19 @@
+- name: Create admin directory
+  file:
+    path: ~/ceph-admin
+    mode: 0744
+    state: directory
+  become: yes
+  become_user: ceph
+
+- name: ceph-deploy
+  command: ceph-deploy new {{ groups['ceph-osd'] | join(" ") }} 
+  args:
+    chdir: ~/ceph-admin
+    creates: ~/ceph-admin/deploy.flag
+  become: yes
+  become_user: ceph
+  tags:
+    - no-disable
+
+
