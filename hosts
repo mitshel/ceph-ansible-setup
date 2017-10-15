@@ -55,3 +55,14 @@ k8s-1
 k8s-2
 k8s-3
 
+[ceph-mds]
+k8s-1
+
+[ceph-rgw]
+k8s-1
+k8s-2
+k8s-3
+
+[ceph-mds]
+k8s-c
+

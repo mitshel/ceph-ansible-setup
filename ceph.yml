@@ -6,3 +6,7 @@
 - hosts: ceph-admin
   roles:
     - ceph-admin
+
+#- hosts: ceph-mon
+#  roles:
+#    - ceph-mon

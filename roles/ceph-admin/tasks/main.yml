@@ -6,14 +6,69 @@
   become: yes
   become_user: ceph
 
-- name: ceph-deploy
-  command: ceph-deploy new {{ groups['ceph-osd'] | join(" ") }} 
+- name: ceph-deploy-new
+  command: ceph-deploy new {{ groups['ceph-mon'] | join(" ") }} 
   args:
     chdir: ~/ceph-admin
-    creates: ~/ceph-admin/deploy.flag
+    creates: ~/ceph-admin/ceph.conf
   become: yes
   become_user: ceph
-  tags:
-    - no-disable
+
+- name: ceph-deploy-install
+  command: ceph-deploy install {{ groups['all'] | join(" ") }}
+  args:
+    chdir: ~/ceph-admin
+    creates: /usr/lib/ceph
+  become: yes
+  become_user: ceph
+
+- name: ceph-deploy-mon-create-initial
+  command: ceph-deploy mon create-initial
+  args:
+    chdir: ~/ceph-admin
+    creates: ~/ceph-admin/ceph.client.admin.keyring
+  become: yes
+  become_user: ceph
+
+- name: ceph-deploy-admin
+  command: ceph-deploy admin {{ groups['all'] | join(" ") }}
+  args:
+    chdir: ~/ceph-admin
+  become: yes
+  become_user: ceph
+
+- name: ceph-deploy-disk-zap
+  command: ceph-deploy disk zap {{item}}:{{ceph_disk_name}}
+  args:
+    chdir: ~/ceph-admin
+  with_items:
+    - "{{ groups['ceph-osd'] }}"
+  become: yes
+  become_user: ceph
+
+- name: ceph-deploy-osd-create
+  command: ceph-deploy osd create {{item}}:{{ceph_disk_name}}
+  args:
+    chdir: ~/ceph-admin
+  with_items:
+    - "{{ groups['ceph-osd'] }}"
+  become: yes
+  become_user: ceph
+
+- name: ceph-deploy-mds-create
+  command: ceph-deploy mds create {{ groups['ceph-mds'] | join(" ") }}
+  args:
+    chdir: ~/ceph-admin
+    creates: /etc/systemd/system/ceph-mds.target.wants/ceph-mds@*.service
+  become: yes
+  become_user: ceph
+
+- name: ceph-deploy-rgw-create
+  command: ceph-deploy rgw create {{ groups['ceph-rgw'] | join(" ") }}
+  args:
+    chdir: ~/ceph-admin
+    creates: /etc/systemd/system/ceph-radosgw.target.wants/ceph-radosgw@rgw.*.service
+  become: yes
+  become_user: ceph
 
 

@@ -1,22 +1,43 @@
   - name: Creates destination directory for ssh keys
     # Workaround for #2372
     file: state=directory mode=0700 dest=/root/.ssh/
+    tags:
+      - disable
       
   - name: Pushes current user rsa key to k8s nodes
     copy: src=~/.ssh/id_rsa.pub dest=/root/.ssh/authorized_keys owner=root mode=0600
     ignore_errors: yes
     tags:
       - ssh-keygen
+      - disable
 
   - name: Disable SELINUX
     selinux:
       state: disabled
+    tags:
+     - disable
 
   - name: Stop and Disable Firewalld
     systemd:
       state: stopped
       enabled: no
       name: firewalld
+    tags:
+      - disable
+
+  - name: Enable service ceph-mon in firewalld 
+    firewalld:
+      service: ceph-mon
+      permanent: true
+      state: enabled
+      zone: public
+
+  - name: Enable service ceph in firewalld
+    firewalld:
+      service: ceph
+      permanent: true
+      state: enabled
+      zone: public
 
   - name: Set IPTables config
     iptables:
@@ -26,6 +47,39 @@
       source: 192.168.7.0/24 
       destination_port: 6789
       jump: ACCEPT
+    tags:
+      - disable
+
+  - name: Yum update
+    yum:
+      name: '*'
+      state: latest
+
+  - name: Yum install packages curl git bridge-utils nfs-utils
+    yum:
+      name={{item}}
+      state=latest
+    with_items:
+      - ntp
+
+  - name: ntpdate
+    command: ntpdate ru.pool.ntp.org
+    tags:
+      - disable
+
+  - name: hwclock
+    command: hwclock --systohc
+    tags:
+      - disable
+
+  - name: Start and enable NTPD
+    systemd:
+      daemon_reload=yes
+      state=started
+      enabled=yes
+      name={{item}}
+    with_items:
+      - ntpd
 
   - name: Add ceph yum repo
     yum_repository:
@@ -41,33 +95,12 @@
       - disable
 
   - name:  Add ceph yum repo
-    copy: src=roles/common/files/yum.repos.d/ceph.repo dest=/etc/yum.repos.d/ owner=root mode=0600
+    copy: src=roles/common/files/yum.repos.d/ceph.repo dest=/etc/yum.repos.d/ owner=root mode=0440
 
-  - name: Yum update
-    yum:
-      name: '*'
-      state: latest
-
-  - name: Yum install packages ntp
-    yum: 
-      name={{item}} 
-      state=latest
-    with_items:
-      - ntp
-
-  - name: Start and enable NTPD
-    systemd:
-      daemon_reload=yes
-      state=started
-      enabled=yes
-      name={{item}}
-    with_items:
-      - ntpd
-
-  - name: Create user ceph (password: dsadmin)
+  - name: Create user ceph (password-dsadmin created with command python -c 'import crypt; print crypt.crypt("dsadmin", "$1$ghj$")')
     user:
       name: ceph
-      password: $6$bosvH2aV$3yYj60/7EILBzvNq/WSyCBPpyEXDhZusVeZ0oDTjDriuNKRPCfqUqxHuvvH4lYE2OX4/GqbTnCSzDc6ePr2nq0
+      password: $1$ghj$x/0jqC3VO5l8JtAbUrm6V/
       generate_ssh_key: yes
 
   - name: copy ceph in sudoers.d
@@ -91,6 +124,12 @@
     tags:
       - ssh-keygen
 
+  - name: Add known_hosts
+    shell: ssh-keyscan {{item}} >> ~/.ssh/known_hosts
+    with_items: "{{ groups['all'] }}"
+    become: yes
+    become_user: ceph
+
   - name: increase kernel.pid_max
     sysctl:
       name: kernel.pid_max
@@ -104,12 +143,17 @@
     with_items:
       - ceph-deploy
 
+  - name: Yum update packages
+    yum:
+      name='*'
+      state=latest
+
   - name: Remove repository ceph
     yum_repository:
       name: ceph
       state: absent
     tags:
-      - disable
+      - nodisable
 
   - name: Remove repository ceph
     file: path=/etc/yum.repos.d/ceph.repo state=absent

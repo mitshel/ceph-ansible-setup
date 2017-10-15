@@ -1,0 +1,12 @@
+- name: Yum update
+  yum:
+    name: '*'
+    state: latest
+
+- name: ceph-deploy mon
+  command: ceph-deploy mon create-initial
+  args:
+    creates: ~/ceph-admin/deploy_mon.flag
+  become: yes
+  become_user: ceph
+
