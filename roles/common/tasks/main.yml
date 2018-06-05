@@ -17,14 +17,6 @@
     tags:
      - disable
 
-  - name: Stop and Disable Firewalld
-    systemd:
-      state: stopped
-      enabled: no
-      name: firewalld
-    tags:
-      - disable
-
   - name: Enable service ceph-mon in firewalld 
     firewalld:
       service: ceph-mon
