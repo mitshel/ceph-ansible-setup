@@ -64,3 +64,6 @@ k8s-1
 k8s-2
 k8s-3
 
+[ceph-iscsi]
+k8s-c
+
