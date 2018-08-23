@@ -1,6 +1,7 @@
 # global variables
 # Наименование дисков для размещения данных ceph
 ceph_disk_name: sdb
+ceph_version: mimic
 
 ### Network addons. More details: https://kubernetes.io/docs/admin/addons/
 # Calico:

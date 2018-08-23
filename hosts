@@ -43,7 +43,7 @@
 ## db-[99:101]-node.example.com
 
 [ceph-admin]
-k8s-1
+k8s-c
 
 [ceph-mon]
 k8s-1
@@ -67,3 +67,8 @@ k8s-3
 [ceph-iscsi]
 k8s-c
 
+[ceph-all]
+k8s-c
+k8s-1
+k8s-2
+k8s-3

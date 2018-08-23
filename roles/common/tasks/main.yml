@@ -42,17 +42,41 @@
     tags:
       - disable
 
+  - name: Remove repository ceph first if exists
+    yum_repository:
+      name: cepa-noarch
+      state: absent
+    tags:
+      - nodisable
+
   - name: Yum update
     yum:
       name: '*'
       state: latest
 
-  - name: Yum install packages curl git bridge-utils nfs-utils
+  - name: Yum install Priorities
+    yum:
+      name={{item}}
+      state=latest
+    with_items:
+      - https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+      - yum-plugin-priorities
+
+  - name: Yum install packages curl git bridge-utils nfs-utils pip wget
     yum:
       name={{item}}
       state=latest
     with_items:
       - ntp
+      - ntpdate
+      - ntp-doc
+      - python-pip
+      - wget
+
+  - name: install the pip packages, force upgrade (for fix ImportError No module named pkg_resources)
+    pip: 
+      name: setuptools distribute
+      state: latest
 
   - name: ntpdate
     command: ntpdate ru.pool.ntp.org
@@ -77,17 +101,17 @@
     yum_repository:
       name: ceph-noarch
       description: Ceph noarch packages
-      baseurl: http://download.ceph.com/rpm-hammer/el7/noarch
+      baseurl: http://download.ceph.com/rpm-{{ceph_version}}/el7/noarch
       enabled: yes
       gpgcheck: yes
-      repo_gpgcheck: yes
+#      repo_gpgcheck: yes
       gpgkey: |
         https://download.ceph.com/keys/release.asc
     tags:
-      - disable
+      - nodisable
 
-  - name:  Add ceph yum repo
-    copy: src=roles/common/files/yum.repos.d/ceph.repo dest=/etc/yum.repos.d/ owner=root mode=0440
+#  - name:  Add ceph yum repo
+#    copy: src=roles/common/files/yum.repos.d/ceph.repo dest=/etc/yum.repos.d/ owner=root mode=0440
 
   - name: Create user ceph (password-dsadmin created with command python -c 'import crypt; print crypt.crypt("dsadmin", "$1$ghj$")')
     user:
@@ -142,13 +166,13 @@
 
   - name: Remove repository ceph
     yum_repository:
-      name: ceph
+      name: cepa-noarch
       state: absent
     tags:
       - nodisable
 
-  - name: Remove repository ceph
-    file: path=/etc/yum.repos.d/ceph.repo state=absent
+#  - name: Remove repository ceph
+#    file: path=/etc/yum.repos.d/ceph.repo state=absent
 
 #  - name: wait for servers restarts
 #    local_action: wait_for port=22 host="{{ inventory_hostname }}" delay=30 state=started timeout=600 connect_timeout=15

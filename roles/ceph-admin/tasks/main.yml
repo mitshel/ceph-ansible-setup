@@ -15,7 +15,7 @@
   become_user: ceph
 
 - name: ceph-deploy-install
-  command: ceph-deploy install {{ groups['all'] | join(" ") }}
+  command: ceph-deploy install --release={{ceph_version}} {{ groups['all'] | join(" ") }}
   args:
     chdir: ~/ceph-admin
     creates: /usr/lib/ceph
@@ -36,6 +36,14 @@
     chdir: ~/ceph-admin
   become: yes
   become_user: ceph
+
+- name: ceph-deploy-mgr
+  command: ceph-deploy mgr create {{ groups['ceph-mon'] | join(" ") }}
+  args:
+    chdir: ~/ceph-admin
+  become: yes
+  become_user: ceph
+
 
 - name: ceph-deploy-disk-zap
   command: ceph-deploy disk zap {{item}}:{{ceph_disk_name}}
